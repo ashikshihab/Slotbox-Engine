@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Slotbox Scheduling Engine - Live digital signage scheduling, capacity checks, and compliance metrics.">
+  <title>Slotbox Engine</title>
+  <!-- Google Fonts: Outfit and Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <header class="app-header">
+      <div class="header-logo">
+        <h1 class="logo-title">Slotbox Engine</h1>
+      </div>
+      <nav class="tab-navigation">
+        <button class="tab-btn active" data-tab="1" id="tab-btn-1">Simulator & Preview</button>
+        <button class="tab-btn" data-tab="2" id="tab-btn-2">Metrics & Verification</button>
+      </nav>
+    </header>
+
+    <main class="app-main-content">
+      <!-- TAB 1: SIMULATOR & CONTROLS -->
+      <div class="tab-content active" id="tab-content-1">
+        <div class="tab-grid-layout">
+          <!-- SIDEBAR: CONFIGURATION -->
+          <aside class="sidebar-card">
+            <!-- Merged System Settings and Venue Ads -->
+            <div class="settings-group">
+              <h2 class="group-title">System & Venue Settings</h2>
+              <div class="form-row">
+                <div class="form-field">
+                  <label for="input-hours">Open Hours</label>
+                  <input type="number" id="input-hours" min="1" max="24" value="8" step="1">
+                  <span class="field-hint">1-24 hrs</span>
+                </div>
+                <div class="form-field">
+                  <label for="input-slots">Paid Slots</label>
+                  <input type="number" id="input-slots" min="1" max="10" value="5" step="1">
+                  <span class="field-hint">Max 10 (10% each)</span>
+                </div>
+              </div>
+              
+              <div class="venue-list-section">
+                <div class="group-header">
+                  <h3 class="list-title">Venue Ads</h3>
+                  <button type="button" class="btn-add-item" id="btn-add-venue" title="Add Venue Ad">+</button>
+                </div>
+                <div class="list-container" id="venue-ads-list">
+                  <!-- Dynamic venue ad items inserted here -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Paid Buyers (Ad slots) -->
+            <div class="settings-group">
+              <div class="group-header">
+                <h2 class="group-title">Paid Buyers</h2>
+                <button type="button" class="btn-add-item" id="btn-add-buyer" title="Add Buyer">+</button>
+              </div>
+              <div class="list-container" id="buyers-list">
+                <!-- Dynamic buyer items inserted here -->
+              </div>
+              <!-- Capacity Warning Banner -->
+              <div id="capacity-warning" class="warning-banner hidden">
+                <span class="warning-icon">⚠️</span>
+                <span id="capacity-warning-text" class="warning-text"></span>
+              </div>
+            </div>
+          </aside>
+
+          <!-- TV SCREEN SIMULATOR -->
+          <section class="simulator-main-panel">
+            <div class="screen-preview-container">
+              <div class="tv-bezel">
+                <div class="tv-screen" id="tv-screen">
+                  <div class="tv-screen-glow" id="tv-screen-glow"></div>
+                  <div class="tv-screen-content">
+                    <span class="tv-badge" id="tv-ad-type">IDLE</span>
+                    <div class="tv-ad-name" id="tv-ad-name">Ready to Play</div>
+                    <div class="tv-ad-timer" id="tv-ad-timer">00:00 / 00:00</div>
+                    <div class="tv-ad-progress-bar">
+                      <div class="tv-ad-progress-fill" id="tv-ad-progress-fill" style="width: 0%"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="tv-controls">
+                <div class="tv-controls-left">
+                  <button type="button" id="tv-play-btn" class="tv-play-button">▶ Play</button>
+                  <span class="tv-time-display" id="tv-time-label">00:00:00 / 08:00:00</span>
+                </div>
+                <div class="tv-controls-center">
+                  <input type="range" id="tv-scrub-bar" min="0" max="28800" value="0" class="tv-scrub-slider">
+                </div>
+                <div class="tv-controls-right">
+                  <select id="tv-speed-select" class="tv-speed-selector">
+                    <option value="1">1x Speed</option>
+                    <option value="10">10x Speed</option>
+                    <option value="50">50x Speed</option>
+                    <option value="200" selected>200x Speed</option>
+                    <option value="1000">1000x Speed</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- TV Screen Mini timeline (current sequence at the bottom) -->
+            <div class="tv-timelines-panel">
+              <div class="timeline-section-title">Current Sequence (30 Min Zoom)</div>
+              <div class="mini-track-wrapper">
+                <div class="mini-track-inner" id="tv-zoom-sequence-track">
+                  <!-- Rendered 30-min blocks -->
+                </div>
+                <div class="mini-playhead" id="tv-zoom-playhead"></div>
+              </div>
+              
+              <div class="timeline-section-title">Full Day Sequence</div>
+              <div class="mini-track-wrapper">
+                <div class="mini-track-inner" id="tv-day-sequence-track">
+                  <!-- Rendered day blocks -->
+                </div>
+                <div class="mini-playhead" id="tv-day-playhead"></div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <!-- TAB 2: METRICS & VERIFICATION (SOURCE OF TRUTH) -->
+      <div class="tab-content hidden" id="tab-content-2">
+        <div class="metrics-dashboard-layout">
+          <!-- ROW 1: KPI STAT CARDS (GA4 styled strip) -->
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <span class="kpi-card-label">Simulated Duration</span>
+              <span class="kpi-card-value" id="stat-duration">0h 0m</span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-card-label">Total Paid Plays</span>
+              <span class="kpi-card-value" id="stat-paidplays">0</span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-card-label">Slot Fill Rate</span>
+              <span class="kpi-card-value" id="stat-slotfill">0 / 0</span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-card-label">Airtime Booked</span>
+              <span class="kpi-card-value" id="stat-airtimebooked">0%</span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-card-label">Idle Airtime</span>
+              <span class="kpi-card-value" id="stat-idle-airtime">0s</span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-card-label">Max Gap (No Paid Ad)</span>
+              <span class="kpi-card-value" id="stat-maxgap">0s</span>
+            </div>
+          </div>
+
+          <!-- ROW 2: AIRTIME ALLOCATION & ENGINE GUARANTEES side by side -->
+          <div class="metrics-two-col">
+            <section class="analytics-card">
+              <h2 class="analytics-card-title">Airtime Allocation</h2>
+              <div class="progress-stacked-bar" id="airtime-bar">
+                <div class="progress-segment paid" style="width: 0%" id="bar-paid"></div>
+                <div class="progress-segment venue" style="width: 0%" id="bar-venue"></div>
+                <div class="progress-segment idle" style="width: 0%" id="bar-idle"></div>
+              </div>
+              <div class="legend-container">
+                <span class="legend-item"><span class="legend-indicator paid"></span>Paid: <strong id="pct-paid">0%</strong></span>
+                <span class="legend-item"><span class="legend-indicator venue"></span>Venue: <strong id="pct-venue">0%</strong></span>
+                <span class="legend-item"><span class="legend-indicator idle"></span>Idle: <strong id="pct-idle">0%</strong></span>
+              </div>
+            </section>
+
+            <section class="analytics-card">
+              <h2 class="analytics-card-title">Engine Guarantees</h2>
+              <ul class="verification-checklist" id="promises-checklist">
+                <li id="promise-venue-cut">
+                  <span class="status-marker"></span>
+                  <span class="promise-description">Venue ads never cut mid-play</span>
+                </li>
+                <li id="promise-no-overlap">
+                  <span class="status-marker"></span>
+                  <span class="promise-description">No two paid ads overlap</span>
+                </li>
+                <li id="promise-no-past-close">
+                  <span class="status-marker"></span>
+                  <span class="promise-description">No paid ad aired past closing time</span>
+                </li>
+                <li id="promise-plays-delivered">
+                  <span class="status-marker"></span>
+                  <span class="promise-description">Actual plays at or just below target ~P</span>
+                </li>
+                <li id="promise-plays-spread">
+                  <span class="status-marker"></span>
+                  <span class="promise-description">Plays spread across day, not clustered</span>
+                </li>
+              </ul>
+            </section>
+          </div>
+
+          <!-- ROW 3: DAY AIRTIME TIMELINE (full width) -->
+          <section class="analytics-card timeline-visualizer-card">
+            <div class="timeline-header-controls">
+              <h2 class="analytics-card-title">Day Airtime Timeline</h2>
+              <div class="zoom-control-group">
+                <label for="zoom-slider">Zoom</label>
+                <input type="range" id="zoom-slider" min="1" max="15" value="1">
+                <span id="zoom-val" class="zoom-badge">Fit</span>
+              </div>
+            </div>
+
+            <!-- MINI-MAP (Full Day Overview) -->
+            <div class="minimap-outer" id="minimap-container" title="Full Day Overview (Click to jump)">
+              <div class="minimap-inner-track" id="minimap-track"></div>
+              <div class="minimap-viewport-box" id="minimap-viewport"></div>
+              <div class="minimap-marker-playhead" id="minimap-playhead"></div>
+            </div>
+
+            <!-- DETAILED TIMELINE SCROLLER -->
+            <div class="timeline-scroller-viewport" id="detailed-timeline-scroller">
+              <div class="timeline-ticks-row" id="time-ticks"></div>
+              <div class="timeline-scroller-track-container">
+                <div class="timeline-blocks-track" id="timeline-track"></div>
+                <div class="timeline-marker-playhead" id="timeline-playhead"></div>
+              </div>
+            </div>
+
+            <div class="timeline-legend-row" id="timeline-legend"></div>
+          </section>
+
+          <!-- ROW 4: DATA TABLES side by side -->
+          <div class="metrics-two-col">
+            <section class="analytics-card">
+              <h2 class="analytics-card-title">Buyer Performance</h2>
+              <div class="table-container">
+                <table class="analytics-table" id="buyer-metrics-table">
+                  <thead>
+                    <tr>
+                      <th>Buyer</th>
+                      <th>Ad Length</th>
+                      <th>Target ~P</th>
+                      <th>Actual Plays</th>
+                      <th>Ideal Gap</th>
+                      <th>Avg Gap</th>
+                      <th>Max Gap</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="analytics-card">
+              <h2 class="analytics-card-title">Venue Promo Rotation</h2>
+              <div class="table-container">
+                <table class="analytics-table" id="venue-metrics-table">
+                  <thead>
+                    <tr>
+                      <th>Promo Name</th>
+                      <th>Duration</th>
+                      <th>Play Count</th>
+                      <th>Total Airtime</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- JS Entrypoint -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>
